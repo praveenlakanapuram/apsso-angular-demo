@@ -41,7 +41,6 @@ This demo implements **Model 3 — OAuth2/OIDC with PKCE**:
 ```
 src/
 ├── environments/
-│   ├── environment.ts          # Dev config (SSO URLs, client ID)
 │   └── environment.prod.ts     # Production config
 ├── app/
 │   ├── services/
