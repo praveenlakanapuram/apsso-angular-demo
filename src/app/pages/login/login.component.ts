@@ -106,10 +106,19 @@ export class LoginComponent implements OnInit {
   }
 
   private checkAutoLogin() {
-    // If the flag is set and we're not authenticated, trigger login
-    if ((this.auth.shouldAutoLogin() || this.route.snapshot.queryParams['sso_login'] === 'true') && !this.auth.isAuthenticated()) {
+    const hasSsoLoginParam = this.auth.shouldAutoLogin() || this.route.snapshot.queryParams['sso_login'] === 'true';
+
+    // 1. If explicitly told to SSO login, prioritize that redirect
+    if (hasSsoLoginParam) {
       console.log('[LoginComponent] Auto-login triggered via query parameters');
       this.loginWithSSO();
+      return;
+    }
+
+    // 2. Otherwise, if already authenticated, don't stay on the login page
+    if (this.auth.isAuthenticated()) {
+      console.log('[LoginComponent] User already authenticated, redirecting to dashboard');
+      this.router.navigate(['/dashboard']);
     }
   }
 
