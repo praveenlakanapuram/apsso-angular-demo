@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/oauth/(.*)",
+      "destination": "http://206.189.130.216/oauth/$1"
+    },
+    {
+      "source": "/application/(.*)",
+      "destination": "http://206.189.130.216/application/$1"
+    },
+    {
+      "source": "/auth/(.*)",
+      "destination": "http://206.189.130.216/auth/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

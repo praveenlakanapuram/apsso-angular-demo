@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { AuthService } from '../../services/auth.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -13,7 +13,7 @@ import { environment } from '../../../environments/environment.prod';
       <mat-card class="login-card" appearance="outlined">
         <mat-card-header>
           <mat-card-title>AP SSO Demo</mat-card-title>
-          <mat-card-subtitle>Model 3 — OAuth2 / OIDC with PKCE</mat-card-subtitle>
+          <mat-card-subtitle>Model 3 - OAuth2 / OIDC with PKCE</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
           <div class="config-list">
@@ -85,9 +85,16 @@ import { environment } from '../../../environments/environment.prod';
     }
   `],
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   ssoConfig = environment.sso;
-  constructor(private auth: AuthService) {}
+  constructor(public auth: AuthService) { }
+
+  ngOnInit() {
+    if (this.auth.shouldAutoLogin() && !this.auth.isAuthenticated()) {
+      setTimeout(() => this.loginWithSSO(), 100);
+    }
+  }
+
   loginWithSSO(): void {
     this.auth.login();
   }

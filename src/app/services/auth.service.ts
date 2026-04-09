@@ -4,24 +4,36 @@ import { BehaviorSubject } from 'rxjs';
 import { SSOAuth } from '@ap-sso/auth-sdk';
 import { environment } from '../../environments/environment.prod';
 
+export interface UserPost {
+  deptId?: string;
+  deptName?: string;
+  postId?: string;
+  postName?: string;
+  orgUnitId?: string;
+  orgUnitName?: string;
+  apcfssDistrictId?: string;
+  apcfssDistrictName?: string;
+  apcfssMandalId?: string;
+  apcfssMandalName?: string;
+}
+
 export interface SSOUser {
   sub: string;
+  cfmsId?: string;
   name: string;
   preferred_username: string;
   email: string;
-  role?: string;
-  deptId?: string | null;
-  deptName?: string | null;
-  postId?: string | null;
-  postName?: string | null;
-  apcfssDistrictId?: string | null;
-  apcfssDistrictName?: string | null;
+  avatar?: string | null;
+  posts?: UserPost[];
+  groups?: string[];
+  isActive?: boolean;
   [key: string]: unknown;
 }
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private sso: SSOAuth;
+  private autoLoginFlag = false;
 
   private userSubject = new BehaviorSubject<SSOUser | null>(null);
   user$ = this.userSubject.asObservable();
@@ -29,10 +41,34 @@ export class AuthService {
   private logsSubject = new BehaviorSubject<string[]>([]);
   logs$ = this.logsSubject.asObservable();
 
+  shouldAutoLogin(): boolean {
+    return this.autoLoginFlag;
+  }
+
   constructor(private router: Router) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlClientId = urlParams.get('sso_client_id');
+
+    console.log('[DEBUG] window.location.search =', window.location.search);
+    console.log('[DEBUG] urlClientId extracted =', urlClientId);
+
+    if (urlClientId) {
+      localStorage.setItem('sso_demo_client_id', urlClientId);
+    }
+
+    let cachedId = localStorage.getItem('sso_demo_client_id');
+    if (cachedId && !cachedId.startsWith('sso_')) {
+      localStorage.removeItem('sso_demo_client_id');
+      cachedId = null;
+    }
+
+    const effectiveClientId = urlClientId || cachedId || environment.sso.clientId;
+
+    this.autoLoginFlag = urlParams.get('sso_login') === 'true';
+
     this.sso = new SSOAuth({
       domain: environment.sso.domain,
-      clientId: environment.sso.clientId,
+      clientId: effectiveClientId,
       redirectUri: environment.sso.redirectUri,
       scopes: environment.sso.scopes.split(' '),
       authServiceUrl: environment.sso.authServiceUrl,
@@ -57,7 +93,7 @@ export class AuthService {
   }
 
   async handleCallback(): Promise<SSOUser> {
-    this.log('SSO callback received — SDK is processing...');
+    this.log('SSO callback received - SDK is processing...');
 
     try {
       const tokens = await this.sso.platformHandleCallback();
@@ -68,9 +104,11 @@ export class AuthService {
       this.log('Fetching user profile via SDK...');
       const user = await this.sso.platformGetUserInfo() as SSOUser;
 
-      this.log(`User authenticated: ${user.name} (${user.preferred_username})`);
-      this.log(`Department: ${user.deptName || 'N/A'}`);
-      this.log(`Role: ${user.role || 'N/A'}`);
+      this.log(`User authenticated: ${user.name} (${user.preferred_username || user.cfmsId})`);
+      if (user.posts && user.posts.length > 0) {
+        this.log(`Active Post: ${user.posts[0].postName || user.posts[0].postId}`);
+        this.log(`Department: ${user.posts[0].deptName || 'N/A'}`);
+      }
 
       localStorage.setItem('sso_demo_user', JSON.stringify(user));
       this.userSubject.next(user);
@@ -89,7 +127,7 @@ export class AuthService {
       if (token) {
         this.log(`Token refreshed: ${token.substring(0, 25)}...`);
       } else {
-        this.log('No valid token returned — session may have expired.');
+        this.log('No valid token returned - session may have expired.');
       }
     } catch (err: any) {
       this.log(`Token refresh failed: ${err.message}`);
@@ -125,7 +163,8 @@ export class AuthService {
     this.userSubject.next(null);
     this.log('Local session cleared');
 
-    this.sso.logout(window.location.origin + '/login');
+    window.location.href = `${environment.sso.authServiceUrl}/oauth/logout?post_logout_redirect_uri=` +
+      encodeURIComponent(window.location.origin);
   }
 
   isAuthenticated(): boolean {

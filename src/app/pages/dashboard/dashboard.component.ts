@@ -7,10 +7,12 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatListModule } from '@angular/material/list';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatTableModule } from '@angular/material/table';
 
 @Component({
   standalone: true,
-  imports: [AsyncPipe, JsonPipe, MatCardModule, MatButtonModule, MatIconModule, MatToolbarModule, MatDividerModule, MatListModule],
+  imports: [AsyncPipe, JsonPipe, MatCardModule, MatButtonModule, MatIconModule, MatToolbarModule, MatDividerModule, MatListModule, MatChipsModule, MatTableModule],
   template: `
     <mat-toolbar color="primary">
       <span>AP SSO Demo</span>
@@ -27,7 +29,7 @@ import { MatListModule } from '@angular/material/list';
           <mat-card-header>
             <div mat-card-avatar class="avatar">{{ getInitials(user) }}</div>
             <mat-card-title>{{ user.name }}</mat-card-title>
-            <mat-card-subtitle>{{ user.preferred_username }}</mat-card-subtitle>
+            <mat-card-subtitle>{{ user.cfmsId || user.preferred_username }}</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             <mat-list>
@@ -36,24 +38,56 @@ import { MatListModule } from '@angular/material/list';
                 <span matListItemLine>{{ user.email || 'N/A' }}</span>
               </mat-list-item>
               <mat-list-item>
-                <span matListItemTitle>Role</span>
-                <span matListItemLine>{{ user.role || 'N/A' }}</span>
-              </mat-list-item>
-              <mat-list-item>
-                <span matListItemTitle>Department</span>
-                <span matListItemLine>{{ user.deptName || 'N/A' }}</span>
-              </mat-list-item>
-              <mat-list-item>
-                <span matListItemTitle>Post</span>
-                <span matListItemLine>{{ user.postName || 'N/A' }}</span>
-              </mat-list-item>
-              <mat-list-item>
-                <span matListItemTitle>District</span>
-                <span matListItemLine>{{ user.apcfssDistrictName || 'N/A' }}</span>
+                <span matListItemTitle>Status</span>
+                <span matListItemLine>{{ user.isActive ? 'Active' : 'Inactive' }}</span>
               </mat-list-item>
             </mat-list>
           </mat-card-content>
         </mat-card>
+
+        <!-- Groups -->
+        @if (user.groups && user.groups.length > 0) {
+          <mat-card appearance="outlined">
+            <mat-card-header>
+              <mat-card-title>Groups</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <mat-chip-set class="groups-chips">
+                @for (group of user.groups; track group) {
+                  <mat-chip>{{ group }}</mat-chip>
+                }
+              </mat-chip-set>
+            </mat-card-content>
+          </mat-card>
+        }
+
+        <!-- Posts -->
+        @if (user.posts && user.posts.length > 0) {
+          <mat-card appearance="outlined">
+            <mat-card-header>
+              <mat-card-title>Posts ({{ user.posts.length }})</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              @for (post of user.posts; track post.postId) {
+                <div class="post-item">
+                  <div class="post-title">{{ post.postName || post.postId }}</div>
+                  <div class="post-details">
+                    <span>Dept: {{ post.deptName || post.deptId || 'N/A' }}</span>
+                    @if (post.orgUnitName) {
+                      <span>Org: {{ post.orgUnitName }}</span>
+                    }
+                    @if (post.apcfssDistrictName) {
+                      <span>District: {{ post.apcfssDistrictName }}</span>
+                    }
+                    @if (post.apcfssMandalName) {
+                      <span>Mandal: {{ post.apcfssMandalName }}</span>
+                    }
+                  </div>
+                </div>
+              }
+            </mat-card-content>
+          </mat-card>
+        }
 
         <!-- Actions -->
         <mat-card appearance="outlined">
@@ -106,6 +140,26 @@ import { MatListModule } from '@angular/material/list';
       font-weight: 600;
       font-size: 16px;
       border-radius: 50%;
+    }
+    .groups-chips {
+      padding-top: 8px;
+    }
+    .post-item {
+      padding: 12px 0;
+      border-bottom: 1px solid #eee;
+    }
+    .post-item:last-child { border-bottom: none; }
+    .post-title {
+      font-weight: 500;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+    .post-details {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 12px;
+      color: #666;
     }
     .actions-row {
       display: flex;

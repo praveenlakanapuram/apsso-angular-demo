@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { MatCardModule } from '@angular/material/card';
@@ -61,14 +61,20 @@ import { MatButtonModule } from '@angular/material/button';
 export class CallbackComponent implements OnInit {
   error: string | null = null;
 
-  constructor(private router: Router, private auth: AuthService) {}
+  constructor(
+    private router: Router,
+    private auth: AuthService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   async ngOnInit() {
     try {
       await this.auth.handleCallback();
       setTimeout(() => this.router.navigate(['/dashboard']), 800);
     } catch (err: any) {
+      console.error('Callback error:', err);
       this.error = err.message || 'Authentication failed';
+      this.cdr.detectChanges();
     }
   }
 

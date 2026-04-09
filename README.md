@@ -1,4 +1,4 @@
-# SSO Angular Demo — Model 3 (OAuth2/OIDC)
+# SSO Angular Demo
 
 A **standalone, self-contained** Angular demo that integrates with the AP SSO platform using the official `@ap-sso/auth-sdk`.
 
@@ -29,12 +29,12 @@ Open `http://localhost:4200` in your browser.
 
 ## How It Works
 
-This demo implements **Model 3 — OAuth2/OIDC with PKCE**:
+This demo implements **Model 3 - OAuth2/OIDC with PKCE**:
 
-1. **Login Page** — Click "Login with AP SSO" → SDK redirects to the SSO authorization page
-2. **SSO Login** — User authenticates on the SSO platform
-3. **Callback** — SSO redirects back to `/auth/callback` → SDK exchanges the code for tokens
-4. **Dashboard** — Shows the authenticated user's profile, tokens, and SDK action buttons
+1. **Login Page** - Click "Login with AP SSO" → SDK redirects to the SSO authorization page
+2. **SSO Login** - User authenticates on the SSO platform
+3. **Callback** - SSO redirects back to `/auth/callback` → SDK exchanges the code for tokens
+4. **Dashboard** - Shows the authenticated user's profile, tokens, and SDK action buttons
 
 ## Project Structure
 
