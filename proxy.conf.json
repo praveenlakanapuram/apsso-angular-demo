@@ -1,24 +1,24 @@
 {
   "/oauth": {
-    "target": "http://206.189.130.216",
+    "target": "https://206.189.130.216",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"
   },
   "/application": {
-    "target": "http://206.189.130.216",
+    "target": "https://206.189.130.216",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"
   },
   "/auth/logout": {
-    "target": "http://206.189.130.216",
+    "target": "https://206.189.130.216",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"
   },
   "/auth/verify": {
-    "target": "http://206.189.130.216",
+    "target": "https://206.189.130.216",
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"
