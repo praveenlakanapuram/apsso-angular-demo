@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -87,11 +88,28 @@ import { environment } from '../../../environments/environment.prod';
 })
 export class LoginComponent implements OnInit {
   ssoConfig = environment.sso;
-  constructor(public auth: AuthService) { }
+  constructor(
+    public auth: AuthService,
+    private route: ActivatedRoute
+  ) { }
 
   ngOnInit() {
-    if (this.auth.shouldAutoLogin() && !this.auth.isAuthenticated()) {
-      setTimeout(() => this.loginWithSSO(), 100);
+    // 1. Check current state
+    this.checkAutoLogin();
+
+    // 2. Also listen for param changes (in case of transitions)
+    this.route.queryParams.subscribe(params => {
+      if (params['sso_login'] === 'true') {
+        this.checkAutoLogin();
+      }
+    });
+  }
+
+  private checkAutoLogin() {
+    // If the flag is set and we're not authenticated, trigger login
+    if ((this.auth.shouldAutoLogin() || this.route.snapshot.queryParams['sso_login'] === 'true') && !this.auth.isAuthenticated()) {
+      console.log('[LoginComponent] Auto-login triggered via query parameters');
+      this.loginWithSSO();
     }
   }
 

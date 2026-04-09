@@ -41,8 +41,13 @@ export class AuthService {
   private logsSubject = new BehaviorSubject<string[]>([]);
   logs$ = this.logsSubject.asObservable();
 
+  /**
+   * Check if we should automatically trigger the SSO login.
+   * We check both the persistent flag and the current URL params.
+   */
   shouldAutoLogin(): boolean {
-    return this.autoLoginFlag;
+    const urlParams = new URLSearchParams(window.location.search);
+    return this.autoLoginFlag || urlParams.get('sso_login') === 'true';
   }
 
   constructor(private router: Router) {
