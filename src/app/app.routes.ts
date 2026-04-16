@@ -8,6 +8,11 @@ export const routes: Routes = [
       import('./pages/callback/callback.component').then((m) => m.CallbackComponent),
   },
   {
+    path: 'auth/logout',
+    loadComponent: () =>
+      import('./pages/logout/logout.component').then((m) => m.LogoutComponent),
+  },
+  {
     path: 'dashboard',
     loadComponent: () =>
       import('./pages/dashboard/dashboard.component').then((m) => m.DashboardComponent),

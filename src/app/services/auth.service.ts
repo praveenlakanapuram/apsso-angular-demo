@@ -168,6 +168,12 @@ export class AuthService {
     this.userSubject.next(null);
     this.log('Local session cleared');
 
+    // If running in an iframe (e.g. OIDC Front-Channel Logout), don't redirect
+    if (window !== window.top) {
+      this.log('Running in iframe (Front-Channel SLO) - skipping redirect');
+      return;
+    }
+
     window.location.href = `${environment.sso.authServiceUrl}/oauth/logout?post_logout_redirect_uri=` +
       encodeURIComponent(window.location.origin);
   }
