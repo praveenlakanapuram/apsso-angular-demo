@@ -85,6 +85,35 @@ export class AuthService {
         this.userSubject.next(JSON.parse(stored));
       } catch { /* ignore corrupt storage */ }
     }
+
+    // --- Cross-Site Partitioning Fallback ---
+    // Modern browsers (Safari, Chrome) isolate cross-site third-party iframes, meaning
+    // the Front-Channel SLO iframe cannot directly modify our top-level tab's localStorage.
+    // To sync correctly, when the user focuses on this tab, we verify the session still exists globally.
+    const checkSessionState = async () => {
+      if (this.isAuthenticated() && window === window.top) {
+        try {
+          const token = await this.sso.getToken();
+          if (!token) throw new Error('Token invalidated');
+          
+          // Verify with the server
+          const res = await fetch(`${environment.sso.authServiceUrl}/oauth/userinfo`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (res.status === 401) throw new Error('Global SSO Session Terminated');
+        } catch (e) {
+          this.log(`Session sync detected termination: ${(e as Error).message}`);
+          localStorage.removeItem('sso_demo_user');
+          this.userSubject.next(null);
+          this.router.navigate(['/login']);
+        }
+      }
+    };
+
+    window.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') checkSessionState();
+    });
+    window.addEventListener('focus', checkSessionState);
   }
 
   login(): void {
