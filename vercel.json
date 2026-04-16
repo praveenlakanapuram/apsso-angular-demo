@@ -9,10 +9,7 @@
       "source": "/application/(.*)",
       "destination": "https://206.189.130.216/application/$1"
     },
-    {
-      "source": "/auth/logout",
-      "destination": "https://206.189.130.216/auth/logout"
-    },
+
     {
       "source": "/auth/verify",
       "destination": "https://206.189.130.216/auth/verify"
