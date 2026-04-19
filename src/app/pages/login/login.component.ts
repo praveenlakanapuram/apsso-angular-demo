@@ -95,9 +95,17 @@ export class LoginComponent implements OnInit {
   ) { }
 
   ngOnInit() {
-    // If already authenticated, go straight to dashboard
     if (this.auth.isAuthenticated()) {
       this.router.navigate(['/dashboard']);
+      return;
+    }
+
+    // Auto-redirect to SSO if cooldown expired (same logic as auth guard)
+    const lastAttempt = sessionStorage.getItem('sso_auto_redirect_ts');
+    const now = Date.now();
+    if (!lastAttempt || (now - parseInt(lastAttempt, 10)) > 5000) {
+      sessionStorage.setItem('sso_auto_redirect_ts', now.toString());
+      this.auth.login();
     }
   }
 
