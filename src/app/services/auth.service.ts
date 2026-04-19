@@ -195,6 +195,10 @@ export class AuthService {
 
     localStorage.removeItem('sso_demo_user');
     this.userSubject.next(null);
+
+    // Prevent the auth guard from auto-redirecting back to SSO after logout
+    sessionStorage.setItem('sso_auto_redirect_attempted', 'true');
+
     this.log('Local session cleared');
 
     // If running in an iframe (e.g. OIDC Front-Channel Logout), don't redirect
@@ -203,8 +207,9 @@ export class AuthService {
       return;
     }
 
+    // Redirect to SSO logout, then back to /login (not root, to avoid auto-redirect loop)
     window.location.href = `${environment.sso.authServiceUrl}/oauth/logout?post_logout_redirect_uri=` +
-      encodeURIComponent(window.location.origin);
+      encodeURIComponent(window.location.origin + '/login');
   }
 
   isAuthenticated(): boolean {
