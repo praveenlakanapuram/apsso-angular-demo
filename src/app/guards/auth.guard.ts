@@ -4,12 +4,13 @@ import { AuthService } from '../services/auth.service';
 
 export const authGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
-  const router = inject(Router);
 
   if (auth.isAuthenticated()) {
     return true;
   }
 
-  router.navigate(['/login']);
+  // SP-Initiated SSO: auto-redirect to the IdP instead of showing /login
+  console.log('[AuthGuard] No local session — initiating SP-initiated SSO redirect');
+  auth.login();
   return false;
 };

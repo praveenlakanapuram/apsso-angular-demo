@@ -4,11 +4,13 @@ import { AuthService } from '../../services/auth.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { CommonModule } from '@angular/common';
 import { environment } from '../../../environments/environment.prod';
 
 @Component({
   standalone: true,
-  imports: [MatCardModule, MatButtonModule, MatIconModule],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
   template: `
     <div class="login-wrapper">
       <mat-card class="login-card" appearance="outlined">
@@ -17,7 +19,15 @@ import { environment } from '../../../environments/environment.prod';
           <mat-card-subtitle>Model 3 - OAuth2 / OIDC with PKCE</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
-          <div class="config-list">
+          <!-- Auto-redirect state -->
+          <div *ngIf="redirecting" class="auto-redirect">
+            <mat-spinner diameter="32"></mat-spinner>
+            <span>Connecting to SSO...</span>
+            <p class="hint">You will be redirected automatically. If you already have an active SSO session, you'll be signed in without seeing a login form.</p>
+          </div>
+
+          <!-- Config info (shown when not auto-redirecting) -->
+          <div *ngIf="!redirecting" class="config-list">
             <div class="config-item">
               <span class="config-label">Auth URL</span>
               <span class="config-value">{{ ssoConfig.authServiceUrl }}</span>
@@ -54,6 +64,23 @@ import { environment } from '../../../environments/environment.prod';
       max-width: 440px;
       margin: 24px;
     }
+    .auto-redirect {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 24px 0;
+      text-align: center;
+      color: #555;
+      font-size: 14px;
+    }
+    .auto-redirect .hint {
+      font-size: 12px;
+      color: #999;
+      max-width: 320px;
+      line-height: 1.5;
+      margin: 0;
+    }
     .config-list {
       margin-top: 16px;
     }
@@ -88,6 +115,8 @@ import { environment } from '../../../environments/environment.prod';
 })
 export class LoginComponent implements OnInit {
   ssoConfig = environment.sso;
+  redirecting = false;
+
   constructor(
     public auth: AuthService,
     private route: ActivatedRoute,
@@ -95,35 +124,27 @@ export class LoginComponent implements OnInit {
   ) { }
 
   ngOnInit() {
-    // 1. Check current state
-    this.checkAutoLogin();
-
-    // 2. Also listen for param changes (in case of transitions)
-    this.route.queryParams.subscribe(params => {
-      if (params['sso_login'] === 'true') {
-        this.checkAutoLogin();
-      }
-    });
-  }
-
-  private checkAutoLogin() {
-    const hasSsoLoginParam = this.auth.shouldAutoLogin() || this.route.snapshot.queryParams['sso_login'] === 'true';
-
-    // 1. If explicitly told to SSO login, prioritize that redirect
-    if (hasSsoLoginParam) {
-      console.log('[LoginComponent] Auto-login triggered via query parameters');
-      this.loginWithSSO();
-      return;
-    }
-
-    // 2. Otherwise, if already authenticated, don't stay on the login page
+    // If already authenticated, go straight to dashboard
     if (this.auth.isAuthenticated()) {
       console.log('[LoginComponent] User already authenticated, redirecting to dashboard');
       this.router.navigate(['/dashboard']);
+      return;
     }
+
+    // SP-Initiated SSO: auto-redirect to the IdP
+    // If the user has an active SSO session, they'll be authenticated silently.
+    // Show a brief loading state so the user knows what's happening.
+    console.log('[LoginComponent] No local session — auto-redirecting to SSO (SP-initiated flow)');
+    this.redirecting = true;
+
+    // Small delay so the user sees "Connecting to SSO..." before the redirect occurs
+    setTimeout(() => {
+      this.loginWithSSO();
+    }, 500);
   }
 
   loginWithSSO(): void {
     this.auth.login();
   }
 }
+

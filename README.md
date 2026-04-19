@@ -29,29 +29,100 @@ Open `http://localhost:4200` in your browser.
 
 ## How It Works
 
-This demo implements **Model 3 - OAuth2/OIDC with PKCE**:
+This demo implements **Model 3 - OAuth2/OIDC with PKCE** with **SP-Initiated SSO**:
 
-1. **Login Page** - Click "Login with AP SSO" → SDK redirects to the SSO authorization page
-2. **SSO Login** - User authenticates on the SSO platform
-3. **Callback** - SSO redirects back to `/auth/callback` → SDK exchanges the code for tokens
-4. **Dashboard** - Shows the authenticated user's profile, tokens, and SDK action buttons
+1. **User opens the app** → No local session → Auth guard auto-redirects to SSO
+2. **SSO checks session** → If user is already logged in (e.g., via Launchpad), tokens are issued silently — **no login form is shown**
+3. **Callback** → SSO redirects back to `/auth/callback` → SDK exchanges the code for tokens
+4. **Dashboard** → User lands directly on the dashboard, fully authenticated
+
+> If the user has **no** active SSO session, they will be prompted to log in at the SSO platform. After authenticating, they are redirected back to the app.
+
+## SP-Initiated SSO (Auto-Login)
+
+This demo implements the **SP-Initiated SSO** pattern, which is the standard expected behavior for enterprise SSO:
+
+**Scenario:** A user logs into the SSO Launchpad, then opens this application directly via URL (without clicking anything in the Launchpad).
+
+**Expected behavior:** The user is authenticated automatically — no login form, no extra clicks.
+
+### How it's implemented
+
+Three key pieces make this work:
+
+#### 1. Auth Guard (`auth.guard.ts`)
+
+Instead of redirecting to a login page, the guard directly initiates the SSO redirect:
+
+```typescript
+export const authGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+
+  if (auth.isAuthenticated()) {
+    return true;
+  }
+
+  // SP-Initiated SSO: auto-redirect to the IdP instead of showing /login
+  auth.login();
+  return false;
+};
+```
+
+#### 2. Default Route (`app.routes.ts`)
+
+The default route points to `/dashboard` (not `/login`), so the auth guard runs immediately:
+
+```typescript
+{ path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+{ path: '**', redirectTo: 'dashboard' },
+```
+
+#### 3. Login Page (`login.component.ts`)
+
+The login page auto-redirects to SSO on load. A "Connecting to SSO..." spinner is shown briefly. The manual login button is kept as a fallback:
+
+```typescript
+ngOnInit() {
+  if (this.auth.isAuthenticated()) {
+    this.router.navigate(['/dashboard']);
+    return;
+  }
+  // Auto-redirect to SSO
+  this.redirecting = true;
+  setTimeout(() => this.loginWithSSO(), 500);
+}
+```
+
+### Flow Diagram
+
+```
+User visits app URL
+    │
+    ├─ Has local session? ─── YES ──→ Dashboard ✅
+    │
+    └─ NO ──→ Auth guard redirects to SSO /authorize
+                  │
+                  ├─ Has SSO session? ─── YES ──→ Silent token issuance ──→ Dashboard ✅
+                  │
+                  └─ NO ──→ SSO login form ──→ User authenticates ──→ Dashboard ✅
+```
 
 ## Project Structure
 
 ```
 src/
 ├── environments/
-│   └── environment.prod.ts     # Production config
+│   └── environment.prod.ts     # SSO configuration (domain, clientId, etc.)
 ├── app/
 │   ├── services/
 │   │   └── auth.service.ts     # Angular wrapper around @ap-sso/auth-sdk
 │   ├── guards/
-│   │   └── auth.guard.ts       # Route guard (redirects to /login if not authenticated)
+│   │   └── auth.guard.ts       # Route guard — auto-redirects to SSO (SP-initiated)
 │   ├── pages/
-│   │   ├── login/              # Login page with SSO button
+│   │   ├── login/              # Auto-redirect page with fallback button
 │   │   ├── callback/           # OAuth callback handler
 │   │   └── dashboard/          # Authenticated user dashboard
-│   ├── app.routes.ts           # Routing config
+│   ├── app.routes.ts           # Routes — defaults to /dashboard (guard handles auth)
 │   ├── app.config.ts           # App providers
 │   └── app.ts                  # Root component
 ├── styles.css                  # Global styles
