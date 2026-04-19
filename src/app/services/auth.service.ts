@@ -104,6 +104,7 @@ export class AuthService {
         } catch (e) {
           this.log(`Session sync detected termination: ${(e as Error).message}`);
           localStorage.removeItem('sso_demo_user');
+          localStorage.removeItem('sso_tokens');
           this.userSubject.next(null);
           this.router.navigate(['/login']);
         }
@@ -194,6 +195,9 @@ export class AuthService {
     }
 
     localStorage.removeItem('sso_demo_user');
+    localStorage.removeItem('sso_tokens');       // SDK's internal token storage
+    localStorage.removeItem('sso_state');         // SDK's PKCE state
+    localStorage.removeItem('sso_code_verifier'); // SDK's PKCE code verifier
     this.userSubject.next(null);
 
     // Prevent the auth guard from auto-redirecting back to SSO after logout
