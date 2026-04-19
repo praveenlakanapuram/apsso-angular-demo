@@ -102,8 +102,8 @@ export class LoginComponent implements OnInit {
   }
 
   loginWithSSO(): void {
-    // Clear the auto-redirect flag so the guard can try again next time
-    sessionStorage.removeItem('sso_auto_redirect_attempted');
+    // Clear the auto-redirect cooldown so the guard can redirect immediately
+    sessionStorage.removeItem('sso_auto_redirect_ts');
     this.auth.login();
   }
 }
