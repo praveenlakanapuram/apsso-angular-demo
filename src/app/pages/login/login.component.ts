@@ -1,16 +1,14 @@
 import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { CommonModule } from '@angular/common';
 import { environment } from '../../../environments/environment.prod';
 
 @Component({
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule, MatProgressSpinnerModule],
+  imports: [MatCardModule, MatButtonModule, MatIconModule],
   template: `
     <div class="login-wrapper">
       <mat-card class="login-card" appearance="outlined">
@@ -19,15 +17,7 @@ import { environment } from '../../../environments/environment.prod';
           <mat-card-subtitle>Model 3 - OAuth2 / OIDC with PKCE</mat-card-subtitle>
         </mat-card-header>
         <mat-card-content>
-          <!-- Auto-redirect state -->
-          <div *ngIf="redirecting" class="auto-redirect">
-            <mat-spinner diameter="32"></mat-spinner>
-            <span>Connecting to SSO...</span>
-            <p class="hint">You will be redirected automatically. If you already have an active SSO session, you'll be signed in without seeing a login form.</p>
-          </div>
-
-          <!-- Config info (shown when not auto-redirecting) -->
-          <div *ngIf="!redirecting" class="config-list">
+          <div class="config-list">
             <div class="config-item">
               <span class="config-label">Auth URL</span>
               <span class="config-value">{{ ssoConfig.authServiceUrl }}</span>
@@ -64,23 +54,6 @@ import { environment } from '../../../environments/environment.prod';
       max-width: 440px;
       margin: 24px;
     }
-    .auto-redirect {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-      padding: 24px 0;
-      text-align: center;
-      color: #555;
-      font-size: 14px;
-    }
-    .auto-redirect .hint {
-      font-size: 12px;
-      color: #999;
-      max-width: 320px;
-      line-height: 1.5;
-      margin: 0;
-    }
     .config-list {
       margin-top: 16px;
     }
@@ -115,36 +88,22 @@ import { environment } from '../../../environments/environment.prod';
 })
 export class LoginComponent implements OnInit {
   ssoConfig = environment.sso;
-  redirecting = false;
 
   constructor(
     public auth: AuthService,
-    private route: ActivatedRoute,
     private router: Router
   ) { }
 
   ngOnInit() {
     // If already authenticated, go straight to dashboard
     if (this.auth.isAuthenticated()) {
-      console.log('[LoginComponent] User already authenticated, redirecting to dashboard');
       this.router.navigate(['/dashboard']);
-      return;
     }
-
-    // SP-Initiated SSO: auto-redirect to the IdP
-    // If the user has an active SSO session, they'll be authenticated silently.
-    // Show a brief loading state so the user knows what's happening.
-    console.log('[LoginComponent] No local session — auto-redirecting to SSO (SP-initiated flow)');
-    this.redirecting = true;
-
-    // Small delay so the user sees "Connecting to SSO..." before the redirect occurs
-    setTimeout(() => {
-      this.loginWithSSO();
-    }, 500);
   }
 
   loginWithSSO(): void {
+    // Clear the auto-redirect flag so the guard can try again next time
+    sessionStorage.removeItem('sso_auto_redirect_attempted');
     this.auth.login();
   }
 }
-

@@ -70,6 +70,7 @@ export class CallbackComponent implements OnInit {
   async ngOnInit() {
     try {
       await this.auth.handleCallback();
+      sessionStorage.removeItem('sso_auto_redirect_attempted');
       setTimeout(() => this.router.navigate(['/dashboard']), 800);
     } catch (err: any) {
       console.error('Callback error:', err);
