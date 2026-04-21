@@ -100,17 +100,22 @@ export class LoginComponent implements OnInit {
       return;
     }
 
-    // If user explicitly logged out, don't auto-redirect — show login button
+    // If user explicitly logged out, don't auto-redirect
     if (sessionStorage.getItem('sso_user_logged_out') === 'true') {
       return;
     }
 
-    // Auto-redirect to SSO if cooldown expired
+    // If silent check already confirmed no SSO session, don't try again
+    if (sessionStorage.getItem('sso_no_session') === 'true') {
+      return;
+    }
+
+    // Silent auto-redirect to SSO (prompt=none) if cooldown expired
     const lastAttempt = sessionStorage.getItem('sso_auto_redirect_ts');
     const now = Date.now();
     if (!lastAttempt || (now - parseInt(lastAttempt, 10)) > 5000) {
       sessionStorage.setItem('sso_auto_redirect_ts', now.toString());
-      this.auth.login();
+      this.auth.silentLogin();
     }
   }
 
@@ -118,6 +123,7 @@ export class LoginComponent implements OnInit {
     // Clear all redirect blockers — user explicitly wants to login
     sessionStorage.removeItem('sso_user_logged_out');
     sessionStorage.removeItem('sso_auto_redirect_ts');
-    this.auth.login();
+    sessionStorage.removeItem('sso_no_session');
+    this.auth.login();  // Use regular login (shows SSO login form)
   }
 }

@@ -17,7 +17,15 @@ export const authGuard: CanActivateFn = () => {
     return false;
   }
 
-  // SP-Initiated SSO: auto-redirect to the IdP, but prevent rapid loops.
+  // If a silent check already failed (no SSO session), show login page
+  if (sessionStorage.getItem('sso_no_session') === 'true') {
+    console.log('[AuthGuard] No SSO session detected — showing login page');
+    router.navigate(['/login']);
+    return false;
+  }
+
+  // SP-Initiated SSO: silent check for existing SSO session (prompt=none).
+  // Prevent rapid loops with a cooldown.
   const lastAttempt = sessionStorage.getItem('sso_auto_redirect_ts');
   const now = Date.now();
   const cooldownMs = 5000;
@@ -28,9 +36,10 @@ export const authGuard: CanActivateFn = () => {
     return false;
   }
 
-  // First attempt or cooldown expired — try auto-redirect to SSO
-  console.log('[AuthGuard] No local session — initiating SP-initiated SSO redirect');
+  // Try silent session check — if SSO has session, user logs in silently.
+  // If not, callback will set sso_no_session flag and show login page.
+  console.log('[AuthGuard] Checking for SSO session (silent, prompt=none)...');
   sessionStorage.setItem('sso_auto_redirect_ts', now.toString());
-  auth.login();
+  auth.silentLogin();
   return false;
 };

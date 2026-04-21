@@ -92,11 +92,11 @@ export class AuthService {
     // To sync correctly, when the user focuses on this tab, we verify the session still exists globally.
     const checkSessionState = async () => {
       if (this.isAuthenticated() && window === window.top) {
+        // Authenticated: verify session is still valid with the server
         try {
           const token = await this.sso.getToken();
           if (!token) throw new Error('Token invalidated');
           
-          // Verify with the server
           const res = await fetch(`${environment.sso.authServiceUrl}/oauth/userinfo`, {
             headers: { Authorization: `Bearer ${token}` }
           });
@@ -108,6 +108,27 @@ export class AuthService {
           this.userSubject.next(null);
           this.router.navigate(['/login']);
         }
+      } else if (!this.isAuthenticated() && window === window.top) {
+        // Not authenticated — check if we WERE authenticated (cross-tab logout)
+        if (this.userSubject.getValue() !== null) {
+          // Another tab cleared localStorage — sync in-memory state
+          this.log('Cross-tab logout detected — clearing session');
+          this.userSubject.next(null);
+          sessionStorage.setItem('sso_user_logged_out', 'true');
+          this.router.navigate(['/login']);
+          return;
+        }
+
+        // Check if an SSO session appeared (e.g., user logged into Launchpad in another tab)
+        const wasLoggedOut = sessionStorage.getItem('sso_user_logged_out') === 'true';
+        const noSession = sessionStorage.getItem('sso_no_session') === 'true';
+        if (wasLoggedOut || noSession) {
+          this.log('Tab focused while logged out — re-checking SSO session...');
+          sessionStorage.removeItem('sso_user_logged_out');
+          sessionStorage.removeItem('sso_no_session');
+          sessionStorage.removeItem('sso_auto_redirect_ts');
+          this.silentLogin();
+        }
       }
     };
 
@@ -115,6 +136,18 @@ export class AuthService {
       if (document.visibilityState === 'visible') checkSessionState();
     });
     window.addEventListener('focus', checkSessionState);
+
+    // Instant cross-tab logout: 'storage' event fires when another tab modifies localStorage
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'sso_tokens' && !event.newValue) {
+        // Tokens were removed in another tab — logout immediately
+        this.log('Cross-tab storage event: tokens cleared — logging out');
+        localStorage.removeItem('sso_demo_user');
+        this.userSubject.next(null);
+        sessionStorage.setItem('sso_user_logged_out', 'true');
+        this.router.navigate(['/login']);
+      }
+    });
   }
 
   login(): void {
@@ -125,6 +158,55 @@ export class AuthService {
     this.log('Redirecting to SSO authorization page...');
 
     this.sso.platformLogin();
+  }
+
+  /**
+   * Silent login: uses prompt=none to check for existing SSO session.
+   * If SSO session exists → returns auth code silently (no UI).
+   * If no SSO session → returns error=login_required (no login form shown).
+   */
+  async silentLogin(): Promise<void> {
+    this.log('Attempting silent SSO session check (prompt=none)...');
+
+    // Generate PKCE params manually (same as SDK does)
+    const state = this.generateRandomString(32);
+    const codeVerifier = this.generateRandomString(64);
+    const codeChallenge = await this.generateCodeChallenge(codeVerifier);
+
+    // Store in the same keys the SDK uses so platformHandleCallback works
+    localStorage.setItem('sso_platform_state', state);
+    localStorage.setItem('sso_platform_code_verifier', codeVerifier);
+
+    const params = new URLSearchParams({
+      response_type: 'code',
+      client_id: this.sso['config'].clientId,
+      redirect_uri: this.sso['config'].redirectUri,
+      scope: this.sso['config'].scopes.join(' '),
+      state,
+      code_challenge: codeChallenge,
+      code_challenge_method: 'S256',
+      prompt: 'none',  // The key difference: don't show login form
+    });
+
+    const authServiceUrl = environment.sso.authServiceUrl;
+    window.location.href = `${authServiceUrl}/oauth/authorize?${params}`;
+  }
+
+  // --- PKCE helpers (same as SDK) ---
+  private generateRandomString(length: number): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+    const array = new Uint8Array(length);
+    crypto.getRandomValues(array);
+    return Array.from(array, (b) => chars[b % chars.length]).join('');
+  }
+
+  private async generateCodeChallenge(verifier: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const hashed = await crypto.subtle.digest('SHA-256', encoder.encode(verifier));
+    const bytes = new Uint8Array(hashed);
+    let str = '';
+    bytes.forEach((b) => (str += String.fromCharCode(b)));
+    return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
   }
 
   async handleCallback(): Promise<SSOUser> {

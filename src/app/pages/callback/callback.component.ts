@@ -68,10 +68,21 @@ export class CallbackComponent implements OnInit {
   ) {}
 
   async ngOnInit() {
+    // Check for prompt=none silent check failure (no SSO session)
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('error') === 'login_required') {
+      console.log('[Callback] No SSO session (prompt=none returned login_required)');
+      sessionStorage.setItem('sso_no_session', 'true');
+      sessionStorage.removeItem('sso_auto_redirect_ts');
+      this.router.navigate(['/login']);
+      return;
+    }
+
     try {
       await this.auth.handleCallback();
       sessionStorage.removeItem('sso_auto_redirect_ts');
       sessionStorage.removeItem('sso_user_logged_out');
+      sessionStorage.removeItem('sso_no_session');
       setTimeout(() => this.router.navigate(['/dashboard']), 800);
     } catch (err: any) {
       console.error('Callback error:', err);
