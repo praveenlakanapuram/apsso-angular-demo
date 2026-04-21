@@ -10,15 +10,19 @@ export const authGuard: CanActivateFn = () => {
     return true;
   }
 
+  // If user explicitly logged out, don't auto-redirect — show login page
+  if (sessionStorage.getItem('sso_user_logged_out') === 'true') {
+    console.log('[AuthGuard] User explicitly logged out — showing login page');
+    router.navigate(['/login']);
+    return false;
+  }
+
   // SP-Initiated SSO: auto-redirect to the IdP, but prevent rapid loops.
-  // We store a timestamp of the last redirect attempt. If it was recent (< 5s),
-  // it means SSO bounced us back without completing auth — show login page instead.
   const lastAttempt = sessionStorage.getItem('sso_auto_redirect_ts');
   const now = Date.now();
-  const cooldownMs = 5000; // 5 seconds
+  const cooldownMs = 5000;
 
   if (lastAttempt && (now - parseInt(lastAttempt, 10)) < cooldownMs) {
-    // Recent redirect attempt — SSO didn't complete auth, fall back to login page
     console.log('[AuthGuard] SSO redirect attempted recently — showing login page');
     router.navigate(['/login']);
     return false;

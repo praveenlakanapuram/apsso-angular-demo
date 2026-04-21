@@ -100,7 +100,12 @@ export class LoginComponent implements OnInit {
       return;
     }
 
-    // Auto-redirect to SSO if cooldown expired (same logic as auth guard)
+    // If user explicitly logged out, don't auto-redirect — show login button
+    if (sessionStorage.getItem('sso_user_logged_out') === 'true') {
+      return;
+    }
+
+    // Auto-redirect to SSO if cooldown expired
     const lastAttempt = sessionStorage.getItem('sso_auto_redirect_ts');
     const now = Date.now();
     if (!lastAttempt || (now - parseInt(lastAttempt, 10)) > 5000) {
@@ -110,7 +115,8 @@ export class LoginComponent implements OnInit {
   }
 
   loginWithSSO(): void {
-    // Clear the auto-redirect cooldown so the guard can redirect immediately
+    // Clear all redirect blockers — user explicitly wants to login
+    sessionStorage.removeItem('sso_user_logged_out');
     sessionStorage.removeItem('sso_auto_redirect_ts');
     this.auth.login();
   }

@@ -71,6 +71,7 @@ export class CallbackComponent implements OnInit {
     try {
       await this.auth.handleCallback();
       sessionStorage.removeItem('sso_auto_redirect_ts');
+      sessionStorage.removeItem('sso_user_logged_out');
       setTimeout(() => this.router.navigate(['/dashboard']), 800);
     } catch (err: any) {
       console.error('Callback error:', err);

@@ -200,8 +200,8 @@ export class AuthService {
     localStorage.removeItem('sso_code_verifier'); // SDK's PKCE code verifier
     this.userSubject.next(null);
 
-    // Prevent the auth guard from auto-redirecting back to SSO after logout
-    sessionStorage.setItem('sso_auto_redirect_attempted', 'true');
+    // Prevent auto-redirect after explicit logout (cleared when user clicks Login)
+    sessionStorage.setItem('sso_user_logged_out', 'true');
 
     this.log('Local session cleared');
 
