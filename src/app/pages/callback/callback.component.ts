@@ -76,6 +76,10 @@ export class CallbackComponent implements OnInit {
       console.log('[Callback] No SSO session (prompt=none returned login_required)');
       sessionStorage.setItem('sso_no_session', 'true');
       sessionStorage.removeItem('sso_auto_redirect_ts');
+      // Clean up hash fragment from URL
+      if (window.location.hash) {
+        window.history.replaceState({}, '', window.location.pathname + window.location.search);
+      }
       this.router.navigate(['/login']);
       return;
     }

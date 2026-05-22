@@ -186,7 +186,6 @@ export class AuthService {
       code_challenge: codeChallenge,
       code_challenge_method: 'S256',
       prompt: 'none',  // The key difference: don't show login form
-      response_mode: 'fragment',  // Deliver code in URL fragment, not query params
     });
 
     const authServiceUrl = environment.sso.authServiceUrl;
