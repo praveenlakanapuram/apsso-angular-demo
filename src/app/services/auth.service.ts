@@ -22,7 +22,7 @@ export interface SSOUser {
   cfmsId?: string;
   name: string;
   preferred_username: string;
-  email: string;
+  email?: string;
   avatar?: string | null;
   posts?: UserPost[];
   groups?: string[];
@@ -186,6 +186,7 @@ export class AuthService {
       code_challenge: codeChallenge,
       code_challenge_method: 'S256',
       prompt: 'none',  // The key difference: don't show login form
+      response_mode: 'fragment',  // Deliver code in URL fragment, not query params
     });
 
     const authServiceUrl = environment.sso.authServiceUrl;

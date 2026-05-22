@@ -3,16 +3,16 @@
   "rewrites": [
     {
       "source": "/oauth/(.*)",
-      "destination": "https://206.189.130.216/oauth/$1"
+      "destination": "https://apsso.online/oauth/$1"
     },
     {
       "source": "/application/(.*)",
-      "destination": "https://206.189.130.216/application/$1"
+      "destination": "https://apsso.online/application/$1"
     },
 
     {
       "source": "/auth/verify",
-      "destination": "https://206.189.130.216/auth/verify"
+      "destination": "https://apsso.online/auth/verify"
     },
     {
       "source": "/(.*)",

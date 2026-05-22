@@ -69,8 +69,10 @@ export class CallbackComponent implements OnInit {
 
   async ngOnInit() {
     // Check for prompt=none silent check failure (no SSO session)
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('error') === 'login_required') {
+    // Params may arrive in query string or URL fragment (hash)
+    const queryParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    if (queryParams.get('error') === 'login_required' || hashParams.get('error') === 'login_required') {
       console.log('[Callback] No SSO session (prompt=none returned login_required)');
       sessionStorage.setItem('sso_no_session', 'true');
       sessionStorage.removeItem('sso_auto_redirect_ts');
