@@ -151,11 +151,11 @@ export class AuthService {
   }
 
   login(): void {
-    this.log('Initiating OAuth2/PKCE login via SDK...');
+    this.log('Initiating OAuth2/PKCE login via SDK v1.0.2...');
     this.log(`Domain: ${environment.sso.domain}`);
     this.log(`Client ID: ${environment.sso.clientId}`);
     this.log(`Redirect URI: ${environment.sso.redirectUri}`);
-    this.log('Redirecting to SSO authorization page...');
+    this.log('Redirecting to SSO authorization page (response_mode=fragment)...');
 
     this.sso.platformLogin();
   }
@@ -164,11 +164,14 @@ export class AuthService {
    * Silent login: uses prompt=none to check for existing SSO session.
    * If SSO session exists → returns auth code silently (no UI).
    * If no SSO session → returns error=login_required (no login form shown).
+   *
+   * Uses the same PKCE + response_mode=fragment as SDK v1.0.2's platformLogin(),
+   * but adds prompt=none to suppress the login UI.
    */
   async silentLogin(): Promise<void> {
-    this.log('Attempting silent SSO session check (prompt=none)...');
+    this.log('Attempting silent SSO session check (prompt=none, response_mode=fragment)...');
 
-    // Generate PKCE params manually (same as SDK does)
+    // Generate PKCE params (reuse SDK's crypto utilities)
     const state = this.generateRandomString(32);
     const codeVerifier = this.generateRandomString(64);
     const codeChallenge = await this.generateCodeChallenge(codeVerifier);
@@ -185,14 +188,15 @@ export class AuthService {
       state,
       code_challenge: codeChallenge,
       code_challenge_method: 'S256',
-      prompt: 'none',  // The key difference: don't show login form
+      prompt: 'none',              // Don't show login form
+      response_mode: 'fragment',   // Match SDK v1.0.2: deliver via URL hash
     });
 
     const authServiceUrl = environment.sso.authServiceUrl;
     window.location.href = `${authServiceUrl}/oauth/authorize?${params}`;
   }
 
-  // --- PKCE helpers (same as SDK) ---
+  // --- PKCE helpers (needed for silentLogin since SDK doesn't expose prompt=none) ---
   private generateRandomString(length: number): string {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
     const array = new Uint8Array(length);
@@ -209,8 +213,12 @@ export class AuthService {
     return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
   }
 
+  /**
+   * Handle the OAuth callback — delegates to SDK v1.0.2's platformHandleCallback()
+   * which reads auth code from URL fragment (#) first, then query string (?).
+   */
   async handleCallback(): Promise<SSOUser> {
-    this.log('SSO callback received - SDK is processing...');
+    this.log('SSO callback received - SDK v1.0.2 processing (fragment + query fallback)...');
 
     try {
       const tokens = await this.sso.platformHandleCallback();
